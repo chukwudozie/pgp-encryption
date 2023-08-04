@@ -89,7 +89,7 @@ public class KeyGenServiceImpl implements KeyGenService {
         try{
             Security.addProvider(new BouncyCastleProvider());
 //            PGPPrivateKey privateKey1 = PGPUtils.readPrivateKey(new FileInputStream(privateKey), getPassphrase());
-            PGPPrivateKey privateKey1 = PGPUtils.readPrivateKey(new FileInputStream("src/main/resources/instant_upgrade_0x6F125DB8_SECRET.asc"), "1234567890".toCharArray());
+            PGPPrivateKey privateKey1 = PGPUtils.readPrivateKey(new FileInputStream("src/main/resources/instant_upgrade_0x6F125DB8_SECRET.asc"), getPassphrase());
             System.out.println("Private key ==> "+privateKey1);
             byte[] decrypted1 = PGPUtils.decrypt(encryptedText.getBytes(), privateKey1);
             log.info("Byte array generated after decryption");
@@ -135,10 +135,4 @@ public class KeyGenServiceImpl implements KeyGenService {
 
     }
 
-    public static void main(String[] args) {
-        var obj = new KeyGenServiceImpl();
-//        System.out.println(obj.encrypt("Emeka"));
-        var encrypted = obj.encrypt("Emeka");
-        System.out.println(obj.decrypt(encrypted));
-    }
 }
