@@ -96,68 +96,120 @@ public class PGPUtils {
     }
 
 
+
+
+
+//    public static byte[] decrypt(byte[] encryptedData, PGPPrivateKey privateKey) throws IOException, PGPException {
+//        ByteArrayInputStream bis = new ByteArrayInputStream(encryptedData);
+//        InputStream in = PGPUtil.getDecoderStream(bis);
+//        JcaPGPObjectFactory pgpF = new JcaPGPObjectFactory(in);
+//        System.out.println("bis ==> "+bis);
+//
+//        PGPEncryptedDataList enc;
+//        Object o = pgpF.nextObject();
+//        System.out.println("Object 0 ==> "+o);
+//
+//        if (o instanceof PGPEncryptedDataList) {
+//            enc = (PGPEncryptedDataList)o;
+//        } else {
+//            enc = (PGPEncryptedDataList)pgpF.nextObject();
+//        }
+//
+//
+//        Iterator<?> it = enc.getEncryptedDataObjects();
+//        PGPPrivateKey sKey = null;
+//        PGPPublicKeyEncryptedData pbe = null;
+//        while (sKey == null && it.hasNext()) {
+//            pbe = (PGPPublicKeyEncryptedData)it.next();
+//            sKey = privateKey;
+//        }
+//        System.out.println("I came here oooo");
+//
+//        if (sKey == null) {
+//
+//            throw new IllegalArgumentException("Secret key for message not found.");
+//        }
+//
+//        System.out.println("getting data stream  ...");
+//        InputStream clear = pbe.getDataStream(new JcePublicKeyDataDecryptorFactoryBuilder().setProvider(new BouncyCastleProvider()).build(sKey));
+//
+//        System.out.println("clear "+clear);
+//
+//        JcaPGPObjectFactory pgpFact = new JcaPGPObjectFactory(clear);
+//
+//        System.out.println("before");
+//        PGPCompressedData cData = (PGPCompressedData) pgpFact.nextObject();
+//        System.out.println("c Data => "+cData);
+//
+//        pgpFact = new JcaPGPObjectFactory(cData.getDataStream());
+//
+//        PGPLiteralData ld = (PGPLiteralData) pgpFact.nextObject();
+//
+//        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+//
+//        InputStream unc = ld.getInputStream();
+//        System.out.println(Objects.isNull(unc));
+//        System.out.println(unc);
+//        int ch;
+//        while ((ch = unc.read()) >= 0) {
+//            bOut.write(ch);
+//        }
+//
+//        byte[] uncBytes = bOut.toByteArray();
+//        bOut.close();
+//        unc.close();
+//
+//        return uncBytes;
+//    }
+
     public static byte[] decrypt(byte[] encryptedData, PGPPrivateKey privateKey) throws IOException, PGPException {
-        ByteArrayInputStream bis = new ByteArrayInputStream(encryptedData);
-        InputStream in = PGPUtil.getDecoderStream(bis);
-        JcaPGPObjectFactory pgpF = new JcaPGPObjectFactory(in);
-        System.out.println("bis ==> "+bis);
 
-        PGPEncryptedDataList enc;
-        Object o = pgpF.nextObject();
-        System.out.println("Object 0 ==> "+o);
-
-        if (o instanceof PGPEncryptedDataList) {
-            enc = (PGPEncryptedDataList)o;
-        } else {
-            enc = (PGPEncryptedDataList)pgpF.nextObject();
-        }
-
-
-        Iterator<?> it = enc.getEncryptedDataObjects();
-        PGPPrivateKey sKey = null;
-        PGPPublicKeyEncryptedData pbe = null;
-        while (sKey == null && it.hasNext()) {
-            pbe = (PGPPublicKeyEncryptedData)it.next();
-            sKey = privateKey;
-        }
-
-
-        if (sKey == null) {
-
+        if (privateKey == null) {
             throw new IllegalArgumentException("Secret key for message not found.");
         }
 
+        try(ByteArrayInputStream bis = new ByteArrayInputStream(encryptedData); InputStream in = PGPUtil.getDecoderStream(bis)){
+            JcaPGPObjectFactory pgpF = new JcaPGPObjectFactory(in);
+            PGPEncryptedDataList enc = null;
+            Object o;
 
-        InputStream clear = pbe.getDataStream(new JcePublicKeyDataDecryptorFactoryBuilder().setProvider(new BouncyCastleProvider()).build(sKey));
+            while ((o = pgpF.nextObject()) != null) {
+                if (o instanceof PGPEncryptedDataList) {
+                    enc = (PGPEncryptedDataList) o;
+                    break;
+                }
+            }
 
-        System.out.println("clear "+clear);
+            if (enc == null) {
+                throw new IllegalArgumentException("No PGPEncryptedDataList found in the input data.");
+            }
 
-        JcaPGPObjectFactory pgpFact = new JcaPGPObjectFactory(clear);
+            Iterator<?> it = enc.getEncryptedDataObjects();
+            PGPPublicKeyEncryptedData pbe = (PGPPublicKeyEncryptedData) it.next();
 
-        System.out.println("before");
-        PGPCompressedData cData = (PGPCompressedData) pgpFact.nextObject();
-        System.out.println("c Data => "+cData);
+            try (InputStream clearStream = pbe.getDataStream(new JcePublicKeyDataDecryptorFactoryBuilder().setProvider(new BouncyCastleProvider()).build(privateKey));
+                 ByteArrayOutputStream bOut = new ByteArrayOutputStream()) {
+                JcaPGPObjectFactory pgpFact = new JcaPGPObjectFactory(clearStream);
+                PGPCompressedData cData = (PGPCompressedData) pgpFact.nextObject();
 
-        pgpFact = new JcaPGPObjectFactory(cData.getDataStream());
+                pgpFact = new JcaPGPObjectFactory(cData.getDataStream());
+                PGPLiteralData ld = (PGPLiteralData) pgpFact.nextObject();
+                try (InputStream unc = ld.getInputStream()) {
+                    int ch;
+                    while ((ch = unc.read()) >= 0) {
+                        bOut.write(ch);
+                    }
+                }
 
-        PGPLiteralData ld = (PGPLiteralData) pgpFact.nextObject();
+                return bOut.toByteArray();
+            }
 
-        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-
-        InputStream unc = ld.getInputStream();
-        System.out.println(Objects.isNull(unc));
-        System.out.println(unc);
-        int ch;
-        while ((ch = unc.read()) >= 0) {
-            bOut.write(ch);
         }
 
-        byte[] uncBytes = bOut.toByteArray();
-        bOut.close();
-        unc.close();
-
-        return uncBytes;
     }
+
+
+
 
     public static PGPPublicKey readPublicKey(InputStream in) throws IOException, PGPException {
         PGPPublicKeyRingCollection keyRingCollection = new PGPPublicKeyRingCollection(PGPUtil.getDecoderStream(in), new JcaKeyFingerprintCalculator());

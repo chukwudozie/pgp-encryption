@@ -9,6 +9,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.*;
 import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
+import org.bouncycastle.openpgp.operator.jcajce.JcaKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -20,6 +21,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PublicKey;
 import java.security.Security;
+import java.util.Base64;
 import java.util.Date;
 
 import static dev.saha.pgpencryption.utils.PGPUtils.createSecretKey;
@@ -72,7 +74,7 @@ public class KeyGenServiceImpl implements KeyGenService {
             System.out.println("in ");
             Security.addProvider(new BouncyCastleProvider());
 //            PGPPublicKey publicKey = readPublicKey(new FileInputStream(pubKey));
-            PGPPublicKey publicKey1 = readPublicKey(new FileInputStream("src/main/resources/instant_upgrade_0x6F125DB8_public.asc"));
+            PGPPublicKey publicKey1 = readPublicKey(new FileInputStream("src/main/resources/UBA_CREATE_PIN_0x1843D890_public.asc"));
             System.out.println("Public key ==> "+publicKey1);
 //            byte[] encrypted = PGPUtils.encrypt(plainText.getBytes(), publicKey);
             byte[] encrypted1 = PGPUtils.encrypt(plainText.getBytes(), publicKey1);
@@ -89,7 +91,7 @@ public class KeyGenServiceImpl implements KeyGenService {
         try{
             Security.addProvider(new BouncyCastleProvider());
 //            PGPPrivateKey privateKey1 = PGPUtils.readPrivateKey(new FileInputStream(privateKey), getPassphrase());
-            PGPPrivateKey privateKey1 = PGPUtils.readPrivateKey(new FileInputStream("src/main/resources/instant_upgrade_0x6F125DB8_SECRET.asc"), getPassphrase());
+            PGPPrivateKey privateKey1 = PGPUtils.readPrivateKey(new FileInputStream("src/main/resources/UBA_CREATE_PIN_0x1843D890_SECRET.asc"), "123454321".toCharArray());
             System.out.println("Private key ==> "+privateKey1);
             byte[] decrypted1 = PGPUtils.decrypt(encryptedText.getBytes(), privateKey1);
             log.info("Byte array generated after decryption");
@@ -134,5 +136,46 @@ public class KeyGenServiceImpl implements KeyGenService {
         }
 
     }
+
+    public String encodePublicKeyToBase64(String publicKeyPath) throws IOException, PGPException {
+        try(InputStream inputStream = new FileInputStream(publicKeyPath)) {
+
+            PGPPublicKey publicKey = extractPublicKey(inputStream);
+            return encodeKey(publicKey);
+
+        }
+
+    }
+
+    private String encodeKey(PGPPublicKey publicKey) throws IOException {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        publicKey.encode(byteArrayOutputStream);
+        byte[] publicKeyBytes = byteArrayOutputStream.toByteArray();
+        return Base64.getEncoder().encodeToString(publicKeyBytes);
+    }
+
+    private PGPPublicKey extractPublicKey(InputStream inputStream) throws IOException, PGPException {
+        PGPPublicKeyRingCollection keyRingCollection = new PGPPublicKeyRingCollection(PGPUtil.getDecoderStream(inputStream), new JcaKeyFingerprintCalculator());
+        PGPPublicKeyRing keyRing = keyRingCollection.getKeyRings().next();
+        return keyRing.getPublicKey();
+    }
+
+    public String encrypt2(String plaintText, String clientId) throws PGPException, IOException {
+        Security.addProvider(new BouncyCastleProvider());
+        String base64 = encodePublicKeyToBase64("src/main/resources/uba_tokenization_test_1_0xA62DD025_public.asc");
+        byte[] publicKeyBytes = Base64.getDecoder().decode(base64);
+        var pub = readPublicKey(new ByteArrayInputStream(publicKeyBytes));
+
+        byte[] encryptedData = PGPUtils.encrypt(plaintText.getBytes(), pub);
+        return new String(encryptedData);
+    }
+
+    public static void main(String[] args) throws PGPException, IOException {
+        KeyGenServiceImpl service = new KeyGenServiceImpl();
+
+        System.out.println(service.encrypt2("Emeka", ""));
+
+    }
+
 
 }
