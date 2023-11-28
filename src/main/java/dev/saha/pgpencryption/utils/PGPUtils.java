@@ -17,7 +17,6 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.Objects;
 
 @Component
 public class PGPUtils {
@@ -94,73 +93,6 @@ public class PGPUtils {
 
         return bOut.toByteArray();
     }
-
-
-
-
-
-//    public static byte[] decrypt(byte[] encryptedData, PGPPrivateKey privateKey) throws IOException, PGPException {
-//        ByteArrayInputStream bis = new ByteArrayInputStream(encryptedData);
-//        InputStream in = PGPUtil.getDecoderStream(bis);
-//        JcaPGPObjectFactory pgpF = new JcaPGPObjectFactory(in);
-//        System.out.println("bis ==> "+bis);
-//
-//        PGPEncryptedDataList enc;
-//        Object o = pgpF.nextObject();
-//        System.out.println("Object 0 ==> "+o);
-//
-//        if (o instanceof PGPEncryptedDataList) {
-//            enc = (PGPEncryptedDataList)o;
-//        } else {
-//            enc = (PGPEncryptedDataList)pgpF.nextObject();
-//        }
-//
-//
-//        Iterator<?> it = enc.getEncryptedDataObjects();
-//        PGPPrivateKey sKey = null;
-//        PGPPublicKeyEncryptedData pbe = null;
-//        while (sKey == null && it.hasNext()) {
-//            pbe = (PGPPublicKeyEncryptedData)it.next();
-//            sKey = privateKey;
-//        }
-//        System.out.println("I came here oooo");
-//
-//        if (sKey == null) {
-//
-//            throw new IllegalArgumentException("Secret key for message not found.");
-//        }
-//
-//        System.out.println("getting data stream  ...");
-//        InputStream clear = pbe.getDataStream(new JcePublicKeyDataDecryptorFactoryBuilder().setProvider(new BouncyCastleProvider()).build(sKey));
-//
-//        System.out.println("clear "+clear);
-//
-//        JcaPGPObjectFactory pgpFact = new JcaPGPObjectFactory(clear);
-//
-//        System.out.println("before");
-//        PGPCompressedData cData = (PGPCompressedData) pgpFact.nextObject();
-//        System.out.println("c Data => "+cData);
-//
-//        pgpFact = new JcaPGPObjectFactory(cData.getDataStream());
-//
-//        PGPLiteralData ld = (PGPLiteralData) pgpFact.nextObject();
-//
-//        ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-//
-//        InputStream unc = ld.getInputStream();
-//        System.out.println(Objects.isNull(unc));
-//        System.out.println(unc);
-//        int ch;
-//        while ((ch = unc.read()) >= 0) {
-//            bOut.write(ch);
-//        }
-//
-//        byte[] uncBytes = bOut.toByteArray();
-//        bOut.close();
-//        unc.close();
-//
-//        return uncBytes;
-//    }
 
     public static byte[] decrypt(byte[] encryptedData, PGPPrivateKey privateKey) throws IOException, PGPException {
 
